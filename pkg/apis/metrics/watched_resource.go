@@ -22,11 +22,12 @@ import (
 
 // WatchedCR specifies watched ClickHouseInstallation
 type WatchedCR struct {
-	Namespace   string            `json:"namespace"`
-	Name        string            `json:"name"`
-	Labels      map[string]string `json:"labels"`
-	Annotations map[string]string `json:"annotations"`
-	Clusters    []*WatchedCluster `json:"clusters"`
+	Namespace   string                `json:"namespace"`
+	Name        string                `json:"name"`
+	Labels      map[string]string     `json:"labels"`
+	Annotations map[string]string     `json:"annotations"`
+	Metrics     *MetricsConfiguration `json:"metrics,omitempty"     yaml:"metrics,omitempty"`
+	Clusters    []*WatchedCluster     `json:"clusters"`
 }
 
 // WatchedCluster specifies watched cluster
@@ -45,11 +46,52 @@ type WatchedHost struct {
 	HTTPSPort int32  `json:"httpsPort,omitempty" yaml:"httpsPort,omitempty"`
 }
 
+type MetricsConfiguration struct {
+	Filters *MetricsFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+}
+
+type MetricsFilters struct {
+	DropMetrics        []string `json:"dropMetrics,omitempty"        yaml:"dropMetrics,omitempty"`
+	DropMetricPrefixes []string `json:"dropMetricPrefixes,omitempty" yaml:"dropMetricPrefixes,omitempty"`
+	KeepMetrics        []string `json:"keepMetrics,omitempty"        yaml:"keepMetrics,omitempty"`
+	DropLabels         []string `json:"dropLabels,omitempty"         yaml:"dropLabels,omitempty"`
+	KeepLabels         []string `json:"keepLabels,omitempty"         yaml:"keepLabels,omitempty"`
+}
+
 // NewWatchedCR creates new watched CR
 func NewWatchedCR(src api.ICustomResource) *WatchedCR {
 	cr := &WatchedCR{}
 	cr.readFrom(src)
 	return cr
+}
+
+func newMetricsConfiguration(configuration api.IConfiguration) *MetricsConfiguration {
+	if configuration == nil {
+		return nil
+	}
+
+	metrics := configuration.GetMetrics()
+	if metrics == nil {
+		return nil
+	}
+
+	return &MetricsConfiguration{
+		Filters: newMetricsFilters(metrics.Filters),
+	}
+}
+
+func newMetricsFilters(filters *api.MetricsFilters) *MetricsFilters {
+	if filters == nil {
+		return nil
+	}
+
+	return &MetricsFilters{
+		DropMetrics:        filters.DropMetrics.Value(),
+		DropMetricPrefixes: filters.DropMetricPrefixes.Value(),
+		KeepMetrics:        filters.KeepMetrics.Value(),
+		DropLabels:         filters.DropLabels.Value(),
+		KeepLabels:         filters.KeepLabels.Value(),
+	}
 }
 
 func (cr *WatchedCR) readFrom(src api.ICustomResource) {
@@ -60,6 +102,7 @@ func (cr *WatchedCR) readFrom(src api.ICustomResource) {
 	cr.Name = src.GetName()
 	cr.Labels = src.GetLabels()
 	cr.Annotations = src.GetAnnotations()
+	cr.Metrics = newMetricsConfiguration(src.GetSpec().GetConfiguration())
 
 	src.WalkClusters(func(cl api.ICluster) error {
 		cluster := &WatchedCluster{}
@@ -118,6 +161,13 @@ func (cr *WatchedCR) GetAnnotations() map[string]string {
 		return nil
 	}
 	return cr.Annotations
+}
+
+func (cr *WatchedCR) GetMetricFilters() *MetricsFilters {
+	if cr == nil || cr.Metrics == nil {
+		return nil
+	}
+	return cr.Metrics.Filters
 }
 
 // String is a stringifier

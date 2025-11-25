@@ -77,6 +77,7 @@ type IConfiguration interface {
 	GetQuotas() *Settings
 	GetSettings() *Settings
 	GetFiles() *Settings
+	GetMetrics() *MetricsConfiguration
 }
 
 type ICustomResourceRuntime interface {

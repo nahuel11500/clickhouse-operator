@@ -771,6 +771,44 @@ spec:
                         look into https://github.com/Altinity/clickhouse-operator/blob/master/docs/chi-examples/05-settings-01-overview.yaml for examples
                       # nullable: true
                       x-kubernetes-preserve-unknown-fields: true
+                    metrics:
+                      type: object
+                      description: "optional metrics configuration, allows filtering metrics and labels exposed by the operator for this CHI"
+                      properties:
+                        filters:
+                          type: object
+                          description: "filtering rules applied to metrics and labels"
+                          properties:
+                            dropMetrics:
+                              type: array
+                              description: "drop metrics by exact name or regex pattern"
+                              nullable: true
+                              items:
+                                type: string
+                            dropMetricPrefixes:
+                              type: array
+                              description: "drop metrics by name prefix"
+                              nullable: true
+                              items:
+                                type: string
+                            keepMetrics:
+                              type: array
+                              description: "optional allowlist of metric names or regex patterns to keep"
+                              nullable: true
+                              items:
+                                type: string
+                            dropLabels:
+                              type: array
+                              description: "drop metric labels by name or regex pattern"
+                              nullable: true
+                              items:
+                                type: string
+                            keepLabels:
+                              type: array
+                              description: "optional allowlist of metric labels by name or regex pattern"
+                              nullable: true
+                              items:
+                                type: string
                     clusters:
                       type: array
                       description: |
