@@ -41,9 +41,10 @@ const (
 
 // CHIPrometheusWriter specifies writer to prometheus
 type CHIPrometheusWriter struct {
-	out  chan<- prometheus.Metric
-	chi  *metrics.WatchedCR
-	host *metrics.WatchedHost
+	out    chan<- prometheus.Metric
+	chi    *metrics.WatchedCR
+	host   *metrics.WatchedHost
+	filter *metricsFilter
 }
 
 // NewCHIPrometheusWriter creates new CHI prometheus writer
@@ -52,10 +53,15 @@ func NewCHIPrometheusWriter(
 	chi *metrics.WatchedCR,
 	host *metrics.WatchedHost,
 ) *CHIPrometheusWriter {
+	var filters *metrics.MetricsFilters
+	if chi != nil {
+		filters = chi.GetMetricFilters()
+	}
 	return &CHIPrometheusWriter{
-		out:  out,
-		chi:  chi,
-		host: host,
+		out:    out,
+		chi:    chi,
+		host:   host,
+		filter: newMetricsFilter(filters),
 	}
 }
 
@@ -256,6 +262,10 @@ func (w *CHIPrometheusWriter) writeSingleMetricToPrometheus(
 	value string,
 	metricLabels map[string]string,
 ) {
+	if w.filter.shouldDropMetric(name) {
+		return
+	}
+
 	// Prepare metrics labels
 	labelNames, labelValues := w.prepareLabels(metricLabels)
 	// Prepare metrics value
@@ -289,6 +299,7 @@ func (w *CHIPrometheusWriter) prepareLabels(extraLabels map[string]string) (labe
 		nil,
 		chop.Config().Metrics.Labels.Exclude,
 	)
+	labels = w.filter.filterLabels(labels)
 	return util.MapGetSortedKeysAndValues(labels)
 }
 

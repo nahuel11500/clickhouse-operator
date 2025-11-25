@@ -14,6 +14,8 @@
 
 package v1
 
+import "github.com/altinity/clickhouse-operator/pkg/apis/common/types"
+
 const (
 	// CommonConfigDirClickHouse specifies folder's name, where generated common XML files for ClickHouse would be placed
 	CommonConfigDirClickHouse = "config.d"
@@ -44,13 +46,14 @@ const (
 
 // Configuration defines configuration section of .spec
 type Configuration struct {
-	Zookeeper *ZookeeperConfig `json:"zookeeper,omitempty" yaml:"zookeeper,omitempty"`
-	Users     *Settings        `json:"users,omitempty"     yaml:"users,omitempty"`
-	Profiles  *Settings        `json:"profiles,omitempty"  yaml:"profiles,omitempty"`
-	Quotas    *Settings        `json:"quotas,omitempty"    yaml:"quotas,omitempty"`
-	Settings  *Settings        `json:"settings,omitempty"  yaml:"settings,omitempty"`
-	Files     *Settings        `json:"files,omitempty"     yaml:"files,omitempty"`
-	Clusters  []*Cluster       `json:"clusters,omitempty"  yaml:"clusters,omitempty"`
+	Zookeeper *ZookeeperConfig      `json:"zookeeper,omitempty" yaml:"zookeeper,omitempty"`
+	Users     *Settings             `json:"users,omitempty"     yaml:"users,omitempty"`
+	Profiles  *Settings             `json:"profiles,omitempty"  yaml:"profiles,omitempty"`
+	Quotas    *Settings             `json:"quotas,omitempty"    yaml:"quotas,omitempty"`
+	Settings  *Settings             `json:"settings,omitempty"  yaml:"settings,omitempty"`
+	Files     *Settings             `json:"files,omitempty"     yaml:"files,omitempty"`
+	Metrics   *MetricsConfiguration `json:"metrics,omitempty"   yaml:"metrics,omitempty"`
+	Clusters  []*Cluster            `json:"clusters,omitempty"  yaml:"clusters,omitempty"`
 }
 
 // NewConfiguration creates new Configuration objects
@@ -100,6 +103,13 @@ func (c *Configuration) GetFiles() *Settings {
 	return c.Files
 }
 
+func (c *Configuration) GetMetrics() *MetricsConfiguration {
+	if c == nil {
+		return nil
+	}
+	return c.Metrics
+}
+
 // MergeFrom merges from specified source
 func (c *Configuration) MergeFrom(from *Configuration, _type MergeType) *Configuration {
 	if from == nil {
@@ -114,10 +124,84 @@ func (c *Configuration) MergeFrom(from *Configuration, _type MergeType) *Configu
 	c.Quotas = c.Quotas.MergeFrom(from.Quotas)
 	c.Settings = c.Settings.MergeFrom(from.Settings)
 	c.Files = c.Files.MergeFrom(from.Files)
+	c.Metrics = c.Metrics.MergeFrom(from.Metrics, _type)
 
 	// TODO merge clusters
 	// Copy Clusters for now
 	c.Clusters = from.Clusters
 
 	return c
+}
+
+type MetricsConfiguration struct {
+	Filters *MetricsFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+}
+
+func (m *MetricsConfiguration) MergeFrom(from *MetricsConfiguration, _type MergeType) *MetricsConfiguration {
+	if from == nil {
+		return m
+	}
+
+	if m == nil {
+		return from
+	}
+
+	m.Filters = m.Filters.MergeFrom(from.Filters, _type)
+
+	return m
+}
+
+type MetricsFilters struct {
+	DropMetrics        *types.Strings `json:"dropMetrics,omitempty"        yaml:"dropMetrics,omitempty"`
+	DropMetricPrefixes *types.Strings `json:"dropMetricPrefixes,omitempty" yaml:"dropMetricPrefixes,omitempty"`
+	KeepMetrics        *types.Strings `json:"keepMetrics,omitempty"        yaml:"keepMetrics,omitempty"`
+	DropLabels         *types.Strings `json:"dropLabels,omitempty"         yaml:"dropLabels,omitempty"`
+	KeepLabels         *types.Strings `json:"keepLabels,omitempty"         yaml:"keepLabels,omitempty"`
+}
+
+func (m *MetricsFilters) MergeFrom(from *MetricsFilters, _type MergeType) *MetricsFilters {
+	if from == nil {
+		return m
+	}
+
+	if m == nil {
+		return from
+	}
+
+	switch _type {
+	case MergeTypeFillEmptyValues:
+		if !m.DropMetrics.HasValue() {
+			m.DropMetrics = m.DropMetrics.MergeFrom(from.DropMetrics)
+		}
+		if !m.DropMetricPrefixes.HasValue() {
+			m.DropMetricPrefixes = m.DropMetricPrefixes.MergeFrom(from.DropMetricPrefixes)
+		}
+		if !m.KeepMetrics.HasValue() {
+			m.KeepMetrics = m.KeepMetrics.MergeFrom(from.KeepMetrics)
+		}
+		if !m.DropLabels.HasValue() {
+			m.DropLabels = m.DropLabels.MergeFrom(from.DropLabels)
+		}
+		if !m.KeepLabels.HasValue() {
+			m.KeepLabels = m.KeepLabels.MergeFrom(from.KeepLabels)
+		}
+	case MergeTypeOverrideByNonEmptyValues:
+		if from.DropMetrics.HasValue() {
+			m.DropMetrics = m.DropMetrics.MergeFrom(from.DropMetrics)
+		}
+		if from.DropMetricPrefixes.HasValue() {
+			m.DropMetricPrefixes = m.DropMetricPrefixes.MergeFrom(from.DropMetricPrefixes)
+		}
+		if from.KeepMetrics.HasValue() {
+			m.KeepMetrics = m.KeepMetrics.MergeFrom(from.KeepMetrics)
+		}
+		if from.DropLabels.HasValue() {
+			m.DropLabels = m.DropLabels.MergeFrom(from.DropLabels)
+		}
+		if from.KeepLabels.HasValue() {
+			m.KeepLabels = m.KeepLabels.MergeFrom(from.KeepLabels)
+		}
+	}
+
+	return m
 }

@@ -181,6 +181,31 @@ spec:
         </yandex>
 ```
 
+## .spec.configuration.metrics
+```yaml
+    metrics:
+      filters:
+        dropMetrics:
+        - system.metrics.MyHeavyMetric
+        - "^experimental_.*"
+        dropMetricPrefixes:
+        - debug_
+        keepMetrics:
+        - chi_table_parts
+        dropLabels:
+        - cluster
+        - "^shard_.*"
+        keepLabels:
+        - hostname
+        - namespace
+```
+`.spec.configuration.metrics` controls which metrics and labels are exposed for a particular CHI.  
+Rules are applied before emitting data to Prometheus:
+- `dropMetrics` drops metrics by exact name or regex pattern, `dropMetricPrefixes` drops by prefix
+- `keepMetrics` is an optional allowlist; when set, only matching metrics are exported and it overrides drop rules
+- `dropLabels` removes labels by name or regex, `keepLabels` optionally whitelists labels and overrides drop rules
+- Leaving the section empty keeps the current behaviour with no additional filtering
+
 ## .spec.configuration.clusters
 ```yaml
     clusters:

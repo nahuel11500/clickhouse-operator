@@ -63,6 +63,10 @@ func (c *Configuration) GetFiles() *apiChi.Settings {
 	return c.Files
 }
 
+func (c *Configuration) GetMetrics() *apiChi.MetricsConfiguration {
+	return nil
+}
+
 // MergeFrom merges from specified source
 func (c *Configuration) MergeFrom(from *Configuration, _type apiChi.MergeType) *Configuration {
 	if from == nil {
